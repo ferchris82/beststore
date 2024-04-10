@@ -1,6 +1,9 @@
 package chrisferdev.beststore.controllers;
 
+import java.io.InputStream;
+import java.nio.file.*;
 import java.util.List;
+import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -43,7 +46,7 @@ public class ProductsController {
 
     @PostMapping("/create")
     public String createProduct(
-        @Valid @ModelAttribute ProductDto productDto, BindingResult result) {
+            @Valid @ModelAttribute ProductDto productDto, BindingResult result) {
 
         if (productDto.getImageFile().isEmpty()) {
             result.addError(new FieldError("productDto", "imageFile", "The image file is required"));
@@ -52,19 +55,39 @@ public class ProductsController {
         if (result.hasErrors()) {
             return "products/CreateProduct";
         }
+        
+        // save image file
+        MultipartFile image = productDto.getImageFile();
+        Date createdAt = new Date();
+        String storageFileName = createdAt.getTime() + "_" + image.getOriginalFilename();
+
+        try {
+            String uploadDir = "public/images/";
+            Path uploadPath = Paths.get(uploadDir);
+
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            try (InputStream inputStream = image.getInputStream()) {
+                Files.copy(inputStream, Paths.get(uploadDir + storageFileName),
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Exception ex) {
+            System.out.println("Exception: " + ex.getMessage());
+        }
+
+        Product product = new Product();
+        product.setName(productDto.getName());
+        product.setBrand(productDto.getBrand());
+        product.setCategory(productDto.getCategory());
+        product.setPrice(productDto.getPrice());
+        product.setDescription(productDto.getDescription());
+        product.setCreatedAt(createdAt);;
+        product.setImageFileName(storageFileName);
+
+        repo.save(product);
+
         return "redirect:/products";
-
-    // save image file
-    MultipartFile image = productDto.getImageFile();
-    Date createdAt = new Date();
-    String storageFileName = createdAt.getTime() + "_" + image.getOriginalFilename();
-
-    try {
-        String uploadDir = "public/images/";
-        Path
-    } catch (Exception ex){
-
-    }
-
     }
 }
