@@ -23,6 +23,7 @@ import chrisferdev.beststore.services.ProductsRepository;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Controller
 @RequestMapping("/products")
@@ -56,7 +57,7 @@ public class ProductsController {
         if (result.hasErrors()) {
             return "products/CreateProduct";
         }
-        
+
         // save image file
         MultipartFile image = productDto.getImageFile();
         Date createdAt = new Date();
@@ -84,7 +85,8 @@ public class ProductsController {
         product.setCategory(productDto.getCategory());
         product.setPrice(productDto.getPrice());
         product.setDescription(productDto.getDescription());
-        product.setCreatedAt(createdAt);;
+        product.setCreatedAt(createdAt);
+        ;
         product.setImageFileName(storageFileName);
 
         repo.save(product);
@@ -93,7 +95,7 @@ public class ProductsController {
     }
 
     @GetMapping("/edit")
-    public String showEditPage(Model model, @RequestParam int id){
+    public String showEditPage(Model model, @RequestParam int id) {
 
         try {
             Product product = repo.findById(id).get();
@@ -106,7 +108,7 @@ public class ProductsController {
             product.setPrice(product.getPrice());
             product.setDescription(product.getDescription());
 
-            model.addAttribute("productDto", productDto)
+            model.addAttribute("productDto", productDto);
 
         } catch (Exception ex) {
             System.out.println("Exception: " + ex.getMessage());
@@ -115,4 +117,56 @@ public class ProductsController {
 
         return "products/EditProduct";
     }
+
+    @PostMapping("/edit")
+    public String updateProduct(
+            Model model, @RequestParam int id,
+            @Valid @ModelAttribute ProductDto productDto,
+            BindingResult result) {
+
+        try {
+            Product product = repo.findById(id).get();
+            model.addAttribute("product", product);
+
+            if(result.hasErrors()){
+                return "products/EditProduct";
+            }
+
+            if (!productDto.getImageFile().isEmpty()) {
+                //delete old image
+                String uploadDir = "public/images/";
+                Path oldImagePath = Paths.get(uploadDir + product.getImageFileName());
+
+                try {
+                    Files.delete(oldImagePath);
+                } catch (Exception ex) {
+                    System.out.println("Exception: " + ex.getMessage());
+                }
+
+                // save new image file
+                MultipartFile image = productDto.getImageFile();
+                Date createdAt = new Date();
+                String storageFileName = createdAt.getTime() + "_" + image.getOriginalFilename();
+
+                try (InputStream inputStream = image.getInputStream()){
+                    Files.copy(inputStream, Paths.get(uploadDir + storageFileName),
+                        StandardCopyOption.REPLACE_EXISTING);
+                } 
+                product.setImageFileName(storageFileName);  
+            }
+
+            product.setName(productDto.getName());
+            product.setBrand(productDto.getBrand());
+            product.setCategory(productDto.getCategory());
+            product.setPrice(productDto.getPrice());
+            product.setDescription(productDto.getDescription());
+
+            repo.save(product);
+
+        } catch (Exception ex) {
+            System.out.println("Exception: " + ex.getMessage());
+        }
+        return "redirect:/products";
+    }
+
 }
