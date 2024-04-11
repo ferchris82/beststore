@@ -95,28 +95,28 @@ public class ProductsController {
     }
 
     @GetMapping("/edit")
-    public String showEditPage(Model model, @RequestParam int id) {
+public String showEditPage(Model model, @RequestParam int id) {
 
-        try {
-            Product product = repo.findById(id).get();
-            model.addAttribute("product", product);
+    try {
+        Product product = repo.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
 
-            ProductDto productDto = new ProductDto();
-            product.setName(product.getName());
-            product.setBrand(product.getBrand());
-            product.setCategory(product.getCategory());
-            product.setPrice(product.getPrice());
-            product.setDescription(product.getDescription());
+        ProductDto productDto = new ProductDto();
+        productDto.setName(product.getName());
+        productDto.setBrand(product.getBrand());
+        productDto.setCategory(product.getCategory());
+        productDto.setPrice(product.getPrice());
+        productDto.setDescription(product.getDescription());
 
-            model.addAttribute("productDto", productDto);
+        model.addAttribute("product", product);
+        model.addAttribute("productDto", productDto);
 
-        } catch (Exception ex) {
-            System.out.println("Exception: " + ex.getMessage());
-            return "redirect:/products";
-        }
-
-        return "products/EditProduct";
+    } catch (Exception ex) {
+        System.out.println("Exception: " + ex.getMessage());
+        return "redirect:/products";
     }
+
+    return "products/EditProduct";
+}
 
     @PostMapping("/edit")
     public String updateProduct(
@@ -168,5 +168,32 @@ public class ProductsController {
         }
         return "redirect:/products";
     }
+
+    @GetMapping("/delete")
+    public String deleteProduct(@RequestParam int id){
+    
+        try {
+            Product product = repo.findById(id).get();
+
+            // delete product image
+            Path imagePath = Paths.get("public/images/" + product.getImageFileName());
+
+            try {
+                Files.delete(imagePath);
+
+            } catch (Exception ex) {
+                System.out.println("Exception: " + ex.getMessage());
+            }
+
+            //delete the product 
+            repo.delete(product);
+            
+        } catch (Exception ex) {
+            System.out.println("Exception: " + ex.getMessage());
+        }
+
+        return "redirect:/products";
+    }
+    
 
 }
